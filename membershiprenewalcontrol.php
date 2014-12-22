@@ -115,7 +115,7 @@ function membershiprenewalcontrol_civicrm_alterSettingsFolders(&$metaDataFolders
 function membershiprenewalcontrol_civicrm_pre($op, $objectName, &$id, &$params) {
   if ($objectName == 'Membership' && $op == 'edit') {
     $existingMembershipStatus = civicrm_api3('membership', 'getvalue', array('id' => $id, 'return' => status_id));
-    $nonRenewableStatuses = array(4);
+    $nonRenewableStatuses = array(4, 6 , 10, 12);
     if (in_array($existingMembershipStatus, $nonRenewableStatuses)) {
       $newStatus = civicrm_api3('membership_status', 'getvalue', array('name'=> 'new', 'return' => id));
       unset($params['id'], $params['membership_id']);
