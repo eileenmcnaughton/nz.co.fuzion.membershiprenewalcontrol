@@ -114,10 +114,12 @@ function membershiprenewalcontrol_civicrm_alterSettingsFolders(&$metaDataFolders
  */
 function membershiprenewalcontrol_civicrm_pre($op, $objectName, &$id, &$params) {
   if ($objectName == 'Membership' && $op == 'edit') {
-    $existingMembershipStatus = civicrm_api3('membership', 'getvalue', array('id' => $id, 'return' => status_id));
+    $existingMembership = civicrm_api3('membership', 'getsingle', array('id' => $id, 'return' => array('status_id', 'end_date')));
     $nonRenewableStatuses = array(4, 6 , 10, 12);
-    if (in_array($existingMembershipStatus, $nonRenewableStatuses)) {
-      $newStatus = civicrm_api3('membership_status', 'getvalue', array('name'=> 'new', 'return' => id));
+    if (in_array($existingMembership['status_id'], $nonRenewableStatuses) && !empty($params['end_date'])
+      && strtotime($params['end_date']) > strtotime($existingMembership['end_date'])
+    ) {
+      $newStatus = civicrm_api3('membership_status', 'getvalue', array('name'=> 'new', 'return' => 'id'));
       unset($params['id'], $params['membership_id']);
       $id = NULL;
       $params['join_date'] = $params['membership_start_date'] = $params['start_date'];
