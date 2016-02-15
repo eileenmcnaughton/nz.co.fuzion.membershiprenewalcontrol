@@ -108,17 +108,26 @@ function membershiprenewalcontrol_civicrm_alterSettingsFolders(&$metaDataFolders
 }
 
 /**
- * Implementation of hook_civicrm_alterSettingsFolders
+ * Implements hook_civicrm_pre().
  *
- * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_alterSettingsFolders
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_pre
  */
 function membershiprenewalcontrol_civicrm_pre($op, $objectName, &$id, &$params) {
   if ($objectName == 'Membership' && $op == 'edit') {
-    $existingMembership = civicrm_api3('membership', 'getsingle', array('id' => $id, 'return' => array('status_id', 'end_date', 'is_override')));
-    $nonRenewableStatuses = array(4, 6 , 10, 12);
-    if (empty($existingMembership['is_override']) && in_array($existingMembership['status_id'], $nonRenewableStatuses) && !empty($params['end_date'])
+    $existingMembership = civicrm_api3('membership', 'getsingle', array('id' => $id, 'return' => array('status_id', 'end_date', 'is_override', 'membership_type_id')));
+    // Expired, Cancelled, Resigned, Moved interstate
+    // Suspended", "Application Rejected", "Member Expelled", and "Application Withdrawn"
+    $expiredStatusID = 4;
+
+    $nonRenewableStatuses = array($expiredStatusID, 6 , 10, 12, 14, 15, 16, 17);
+    if (in_array($existingMembership['status_id'], $nonRenewableStatuses) && !empty($params['end_date'])
       && strtotime($params['end_date']) > strtotime($existingMembership['end_date'])
     ) {
+      // Special condition for QLD. See Redmine 9588.
+      if ($existingMembership['status_id'] == 4 && $existingMembership['membership_type_id'] == 35
+        && strtotime($existingMembership['end_date']) > strtotime('1 year ago')) {
+        return;
+      }
       $newStatus = civicrm_api3('membership_status', 'getvalue', array('name'=> 'new', 'return' => 'id'));
       unset($params['id'], $params['membership_id']);
       $id = NULL;
