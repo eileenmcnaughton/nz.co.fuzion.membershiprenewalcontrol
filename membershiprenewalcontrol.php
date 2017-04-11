@@ -115,11 +115,27 @@ function membershiprenewalcontrol_civicrm_alterSettingsFolders(&$metaDataFolders
 function membershiprenewalcontrol_civicrm_pre($op, $objectName, &$id, &$params) {
   if ($objectName == 'Membership' && $op == 'edit') {
     $existingMembership = civicrm_api3('membership', 'getsingle', array('id' => $id, 'return' => array('status_id', 'end_date', 'is_override', 'membership_type_id')));
+    $membershipStatus = civicrm_api3('MembershipStatus', 'get', array(
+      'sequential' => 1,
+      'return' => array("name"),
+    ));
+
     // Expired, Cancelled, Resigned, Moved interstate
     // Suspended", "Application Rejected", "Member Expelled", and "Application Withdrawn"
-    $expiredStatusID = 4;
+    //~ $expiredStatusID = 4;
 
-    $nonRenewableStatuses = array($expiredStatusID, 6 , 10, 12, 14, 15, 16, 17);
+    //~ $nonRenewableStatuses = array($expiredStatusID, 6 , 10, 12, 14, 15, 16, 17);
+
+    $nonRenewableStatuses = array();
+
+    foreach ($membershipStatus['values'] as $key => $status) {
+      if (in_array($status['name'],
+        array('Expired', 'Cancelled', 'Resigned', 'Moved interstate', 'Suspended', 'Application Rejected', 'Member Expelled', 'Application Withdrawn'))
+        ) {
+        $nonRenewableStatuses[] = $status['id'];
+      }
+    }
+
     if (in_array($existingMembership['status_id'], $nonRenewableStatuses) && !empty($params['end_date'])
       && strtotime($params['end_date']) > strtotime($existingMembership['end_date'])
     ) {
