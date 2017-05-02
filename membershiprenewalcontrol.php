@@ -114,7 +114,10 @@ function membershiprenewalcontrol_civicrm_alterSettingsFolders(&$metaDataFolders
  */
 function membershiprenewalcontrol_civicrm_pre($op, $objectName, &$id, &$params) {
   if ($objectName == 'Membership' && $op == 'edit') {
-    $existingMembership = civicrm_api3('membership', 'getsingle', array('id' => $id, 'return' => array('status_id', 'end_date', 'is_override', 'membership_type_id')));
+    $existingMembership = civicrm_api3('membership', 'getsingle', array(
+      'id' => $id,
+      'return' => array('status_id', 'end_date', 'is_override', 'membership_type_id', 'contact_id')
+    ));
     $membershipStatus = civicrm_api3('MembershipStatus', 'get', array(
       'sequential' => 1,
       'return' => array("name"),
@@ -135,6 +138,11 @@ function membershiprenewalcontrol_civicrm_pre($op, $objectName, &$id, &$params) 
         $nonRenewableStatuses[] = $status['id'];
       }
     }
+    $pendingStatus = civicrm_api3('OptionValue', 'getvalue', array(
+      'return' => "value",
+      'option_group_id' => "contribution_status",
+      'name' => "pending",
+    ));
 
     if (in_array($existingMembership['status_id'], $nonRenewableStatuses) && !empty($params['end_date'])
       && strtotime($params['end_date']) > strtotime($existingMembership['end_date'])
@@ -149,6 +157,17 @@ function membershiprenewalcontrol_civicrm_pre($op, $objectName, &$id, &$params) 
       $id = NULL;
       $params['join_date'] = $params['membership_start_date'] = $params['start_date'];
       $params['status_id'] = $newStatus;
+    }
+    //Create new Pending membership in case of renewal and completetransaction is yet to be executed.
+    elseif (!empty($params['contribution']) && $params['contribution']->contribution_status_id == $pendingStatus && in_array($existingMembership['status_id'], $nonRenewableStatuses)) {
+      $params['start_date'] = date('Ymd');
+      $params['contact_id'] = $existingMembership['contact_id'];
+      $params['status_id'] = civicrm_api3('MembershipStatus', 'getvalue', array(
+        'label' => 'Pending',
+        'return' => 'id',
+      ));
+      unset($params['id'], $params['membership_id']);
+      $id = NULL;
     }
   }
 }
