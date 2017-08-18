@@ -157,6 +157,13 @@ function membershiprenewalcontrol_civicrm_pre($op, $objectName, &$id, &$params) 
       $id = NULL;
       $params['join_date'] = $params['membership_start_date'] = $params['start_date'];
       $params['status_id'] = $newStatus;
+      $params['contribution_status_id'] = 1;
+
+      $newMembership = CRM_Member_BAO_Membership::add($params);
+      $memInfo = array_merge($params, array('membership_id' => $newMembership->id));
+      $params['contribution'] = CRM_Member_BAO_Membership::recordMembershipContribution($memInfo);
+      $params['id'] = $params['membership_id'] = $id = $newMembership->id;
+      unset($params['contribution_status_id']);
     }
     //Create new Pending membership in case of renewal and completetransaction is yet to be executed.
     elseif (!empty($params['contribution']) && $params['contribution']->contribution_status_id == $pendingStatus && in_array($existingMembership['status_id'], $nonRenewableStatuses)) {
