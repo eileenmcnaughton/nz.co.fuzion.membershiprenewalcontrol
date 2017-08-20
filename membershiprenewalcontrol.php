@@ -123,14 +123,7 @@ function membershiprenewalcontrol_civicrm_pre($op, $objectName, &$id, &$params) 
       'return' => array("name"),
     ));
 
-    // Expired, Cancelled, Resigned, Moved interstate
-    // Suspended", "Application Rejected", "Member Expelled", and "Application Withdrawn"
-    //~ $expiredStatusID = 4;
-
-    //~ $nonRenewableStatuses = array($expiredStatusID, 6 , 10, 12, 14, 15, 16, 17);
-
     $nonRenewableStatuses = array();
-
     foreach ($membershipStatus['values'] as $key => $status) {
       if (in_array($status['name'],
         array('Expired', 'Cancelled', 'Resigned', 'Moved interstate', 'Suspended', 'Application Rejected', 'Member Expelled', 'Application Withdrawn'))
@@ -152,6 +145,12 @@ function membershiprenewalcontrol_civicrm_pre($op, $objectName, &$id, &$params) 
         && strtotime($existingMembership['end_date']) > strtotime('1 year ago')) {
         return;
       }
+      $contriId = CRM_Member_BAO_Membership::getMembershipContributionId($params['id']);
+      $totalAmount = civicrm_api3('Contribution', 'getsingle', array(
+        'sequential' => 1,
+        'return' => array("total_amount"),
+        'id' => $contriId,
+      ));
       $newStatus = civicrm_api3('membership_status', 'getvalue', array('name'=> 'new', 'return' => 'id'));
       unset($params['id'], $params['membership_id']);
       $id = NULL;
@@ -161,6 +160,10 @@ function membershiprenewalcontrol_civicrm_pre($op, $objectName, &$id, &$params) 
 
       $newMembership = CRM_Member_BAO_Membership::add($params);
       $memInfo = array_merge($params, array('membership_id' => $newMembership->id));
+      //Ensure total_amount has a value.
+      if (empty($memInfo['total_amount'])) {
+        $memInfo['total_amount'] = $totalAmount['total_amount'];
+      }
       $params['contribution'] = CRM_Member_BAO_Membership::recordMembershipContribution($memInfo);
       $params['id'] = $params['membership_id'] = $id = $newMembership->id;
       unset($params['contribution_status_id']);
