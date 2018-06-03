@@ -153,8 +153,7 @@ function membershiprenewalcontrol_civicrm_pre($op, $objectName, &$id, &$params) 
         return;
       }
       $newStatus = civicrm_api3('membership_status', 'getvalue', array('name'=> 'new', 'return' => 'id'));
-      unset($params['id'], $params['membership_id']);
-      $id = NULL;
+      $id = $params['id'] = $params['membership_id'] = NULL;
       $params['join_date'] = $params['membership_start_date'] = $params['start_date'];
       $params['status_id'] = $newStatus;
     }
@@ -166,8 +165,7 @@ function membershiprenewalcontrol_civicrm_pre($op, $objectName, &$id, &$params) 
         'label' => 'Pending',
         'return' => 'id',
       ));
-      unset($params['id'], $params['membership_id']);
-      $id = NULL;
+      $id = $params['id'] = $params['membership_id'] = NULL;
     }
   }
 }
